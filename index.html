@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+
+body{
+    background-color: black
+}
+#notfound{
+    color: #dddddd
+}
+
+#errorfound{
+    color: #FFAEAE	
+}
+
+</style>
+
+</head>
+<body>
+	<script src="dist/jquery.js"></script>
+	<script src="dist/jquery.jqplot.js"></script>
+
+
+<script type="text/javascript" src="dist/plugins/jqplot.dateAxisRenderer.min.js"></script>
+<script type="text/javascript" src="dist/plugins/jqplot.logAxisRenderer.min.js"></script>
+<script type="text/javascript" src="dist/plugins/jqplot.canvasTextRenderer.min.js"></script>
+<script type="text/javascript" src="dist/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
+<script type="text/javascript" src="dist/plugins/jqplot.highlighter.min.js"></script>
+<script type="text/javascript" src="jquery-ui-1.10.1.custom/js/jquery-ui-1.10.1.custom.js"></script>
+<link rel="stylesheet" type="text/css" href="dist/jquery.jqplot.min.css" />
+<link rel="stylesheet" type="text/css" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.0/themes/smoothness/jquery-ui.css" />
+<link rel="stylesheet" type="text/css" href="jquery-ui-1.10.1.custom/css/smoothness/jquery-ui-1.10.1.custom.css" />
+
+
+<input type="text" id="datepicker" />
+
+<div id="chart1" class="ui-widget-content ui-corner-bottom" style="height:768px;width:1024px; background: none repeat scroll 0 0 #393939;"></div>
+
+	<script>
+
+ $(function() {
+$( "#datepicker" ).datepicker({
+  onSelect: function(selectedDate) {
+    data = selectedDate.split("/");
+    getData(data[1], data[0], data[2])
+  }
+});
+});
+
+function get_plot_options(){
+plotOptions = {
+        seriesColors: ["rgba(78, 135, 194, 0.7)", "rgb(211, 235, 59)"],
+       
+        title: {
+            text: 'Web page response time [seconds] for '.concat(graphDate),
+            textColor: '#DDDDDD',
+        },
+        highlighter: {
+            show: true,
+            sizeAdjust: 1,
+            tooltipOffset: 9
+        },
+        grid: {
+            background: 'rgba(57,57,57,0.0)',
+            drawBorder: false,
+            shadow: false,
+            gridLineColor: '#666666',
+            gridLineWidth: 2
+        },
+       
+        seriesDefaults: {
+            color: 'yellow',
+            rendererOptions: {
+                smooth: true,
+                animation: {
+                    show: true
+                }
+            },
+            showMarker: false
+        },
+       
+        axesDefaults: {
+            rendererOptions: {
+                baselineWidth: 1.5,
+                baselineColor: '#444444',
+                drawBaseline: false
+            },
+	    pad: 0,
+            numberTicks: 20
+        },
+        axes: {
+            xaxis: {
+                renderer: $.jqplot.DateAxisRenderer,
+                tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                tickInterval: 3600000,
+		pad: 1,
+		tickOptions: {
+                    formatString: "'%H:%M'",
+                    angle: -90,
+                    textColor: '#dddddd'
+                },
+                drawMajorGridlines: false
+            },
+            yaxis: {
+                tickOptions: {
+                    textColor: '#dddddd'
+                }
+            }
+        }
+    };
+
+    return plotOptions;
+}
+
+
+function getData(day, month, year){
+graphDate = year.concat("-").concat(month).concat("-").concat(day)
+
+$.ajax({
+            url: graphDate.concat("-web_check.log"), //"2013-03-14-web_check.log",
+            type: 'GET',
+            error: function(){
+		$("#notfound").remove(); 
+		$("#chart1").append('<div id="notfound"><br/><br/><br/><h1>No data log file found for date '.concat(graphDate).concat('</h1></div>')); 
+	    },
+	    success: function(result) {
+                $("#notfound").remove();               
+            	$("#errorfound").remove();
+		data = result.split(" "); 
+	    	var plotData = new Array();
+		for (var i = 0; i <= (data.length/6); i++) {
+			response_code = data[i*6 + 5]
+			if(typeof response_code === 'undefined')
+				continue;
+			if( response_code === "OK(200)"  ){
+				plotData[i] = new Array(data[i*6 + 1], parseFloat(data[i*6 + 3], 10));
+			}
+			if(response_code.indexOf('ERROR') !== -1){
+				if($("#errorfound").length <= 0)
+					$("#chart1").append('<div id="errorfound"><br/><h1>There was at least one error response </h1></div>');
+			}
+	    	}
+		plotGraph(plotData, graphDate);
+	    }
+        });
+
+}
+
+$(function () {
+var dt = new Date();
+month = String(dt.getMonth() + 1)
+if(month.length === 1)
+    month = "0".concat(month)
+getData(String(dt.getDate()), month, String(dt.getFullYear())) ;
+})
+
+function plotGraph(responseData, graphDate) { 
+   $.jqplot._noToImageButton = true;
+    
+ 
+    var plot1 = $.jqplot("chart1", [responseData], get_plot_options()).replot();
+ 
+      $('.jqplot-highlighter-tooltip').addClass('ui-corner-all')
+}
+
+
+    </script>
+
+</body>
+</html>
